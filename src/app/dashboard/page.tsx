@@ -23,8 +23,13 @@ export default function Dashboard() {
 
   // Auth guard
   useEffect(() => {
-    if (!loading && !user) router.replace('/login');
-    if (!loading && profile?.role === 'teacher') router.replace('/admin');
+    if (loading) return;
+    if (!user) { router.replace('/login'); return; }
+    if (profile === null) {
+      // Profile not found — SQL not run yet or new user, redirect to login
+      setTimeout(() => router.replace('/login'), 3000);
+    }
+    if (profile?.role === 'teacher') router.replace('/admin');
   }, [user, profile, loading]);
 
   // Fetch existing attendance logs for this student
@@ -97,12 +102,25 @@ export default function Dashboard() {
     setIsMarking(false);
   };
 
-  if (loading || !profile) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[#f3e5f5]">
         <div className="flex flex-col items-center gap-3">
           <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-purple-600 font-medium">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#f3e5f5]">
+        <div className="flex flex-col items-center gap-4 text-center px-6">
+          <div className="text-4xl">⚠️</div>
+          <p className="text-sm font-bold text-gray-700">Profile not found</p>
+          <p className="text-xs text-gray-400">The database tables may not be set up yet.<br/>Redirecting to login...</p>
+          <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin mt-2" />
         </div>
       </div>
     );

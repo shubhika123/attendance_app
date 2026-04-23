@@ -125,7 +125,7 @@ export default function AdminDashboard() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  if (loading || !profile) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-purple-50">
         <div className="flex flex-col items-center gap-3">
@@ -135,6 +135,20 @@ export default function AdminDashboard() {
       </div>
     );
   }
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-purple-50">
+        <div className="flex flex-col items-center gap-4 text-center px-6">
+          <div className="text-4xl">⚠️</div>
+          <p className="text-sm font-bold text-gray-700">Profile not found</p>
+          <p className="text-xs text-gray-400">Please run the SQL setup in Supabase first.<br/>Redirecting to login...</p>
+          <div className="w-6 h-6 border-2 border-purple-400 border-t-transparent rounded-full animate-spin mt-2" />
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
