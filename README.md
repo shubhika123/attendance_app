@@ -1,36 +1,108 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Attendance Pro 📊
 
-## Getting Started
+> Real-time classroom attendance management for teachers and students.
 
-First, run the development server:
+**Live:** [https://attendanceapprepo.vercel.app](https://attendanceapprepo.vercel.app)
+
+---
+
+## Features
+
+### For Teachers (Admin)
+- Open an attendance window for 2 / 3 / 5 / 10 minutes
+- Live countdown timer with auto-close
+- Real-time list of every student who marked attendance (name, enrollment, branch, semester, time)
+- Close the window early at any time
+
+### For Students
+- Sign up with name, enrollment number, branch, and semester
+- Dashboard shows their personal data
+- "Mark Attendance" button activates in real-time the moment teacher opens the window
+- Button locks after marking — prevents double submission
+- Full attendance history with dates and percentage
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|-----------|
+| Framework | Next.js 16 (App Router) |
+| Language | TypeScript |
+| Styling | TailwindCSS |
+| Auth + DB | Supabase |
+| Real-time | Supabase Realtime |
+| Deployment | Vercel |
+
+---
+
+## Local Setup
+
+```bash
+git clone https://github.com/shubhika123/attendance_app.git
+cd attendance_app
+npm install
+```
+
+Create `.env.local`:
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+```
+
+Run the SQL schema in Supabase SQL Editor → paste contents of `supabase_setup.sql` → Run.
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Database Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Run `supabase_setup.sql` in your Supabase SQL Editor. It creates:
 
-## Learn More
+- `profiles` — stores user data (name, enrollment, branch, semester, role)
+- `attendance_sessions` — teacher-controlled attendance windows
+- `attendance_logs` — individual student attendance records
+- Row Level Security policies
+- Auto-profile trigger on signup
+- Real-time enabled on sessions and logs
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## User Roles
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Role | How to register | Access |
+|------|----------------|--------|
+| **Student** | Sign up → pick Student → fill details | Dashboard with own data |
+| **Teacher** | Sign up → pick Teacher → enter code `DEVOPS2024` | Admin control panel |
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+├── app/
+│   ├── page.tsx              # Smart redirect (login → dashboard/admin)
+│   ├── login/page.tsx        # Login page
+│   ├── signup/page.tsx       # 2-step signup (role → details)
+│   ├── dashboard/page.tsx    # Student dashboard
+│   └── admin/page.tsx        # Teacher admin panel
+├── components/
+│   ├── Header.tsx
+│   ├── ProfileCard.tsx
+│   ├── AttendanceProgress.tsx
+│   ├── AttendanceButton.tsx
+│   ├── AssignmentsList.tsx
+│   ├── GradesTable.tsx
+│   └── FeedbackSection.tsx
+├── context/
+│   └── AuthContext.tsx       # Global auth + profile state
+├── hooks/
+│   └── useAttendanceSession.ts
+└── lib/
+    └── supabase.ts           # Supabase client
+supabase_setup.sql            # Full DB schema
+```
