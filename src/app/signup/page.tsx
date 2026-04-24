@@ -56,8 +56,22 @@ export default function SignupPage() {
       }
 
       if (data.user && data.session) {
-        // Wait 800ms for the DB trigger to create the profile row
-        await new Promise(res => setTimeout(res, 800));
+        // Manually insert profile (don't rely solely on DB trigger)
+        const { error: profileError } = await supabase.from('profiles').upsert({
+          id: data.user.id,
+          name: form.name,
+          enrollment: form.enrollment,
+          branch: form.branch,
+          semester: form.semester,
+          role: role,
+          proxy_flag: false,
+        }, { onConflict: 'id' });
+
+        if (profileError) {
+          console.error('Profile insert error:', profileError.message);
+          // Don't block — trigger may have already created it
+        }
+
         router.push(role === 'teacher' ? '/admin' : '/dashboard');
         return;
       }
@@ -68,6 +82,7 @@ export default function SignupPage() {
     } finally {
       setLoading(false);
     }
+
   };
 
   return (
