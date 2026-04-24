@@ -6,20 +6,14 @@ import Link from 'next/link';
 import { GraduationCap, ArrowRight, Eye, EyeOff, AlertCircle, UserCircle2, Shield } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 
-const TEACHER_SECRET_CODE = 'DEVOPS2024'; // Teacher registration code
+const TEACHER_SECRET_CODE = 'DEVOPS2024';
 
 export default function SignupPage() {
   const router = useRouter();
   const [step, setStep] = useState<'role' | 'form'>('role');
   const [role, setRole] = useState<'student' | 'teacher'>('student');
   const [form, setForm] = useState({
-    name: '',
-    email: '',
-    password: '',
-    enrollment: '',
-    branch: '',
-    semester: '',
-    teacherCode: '',
+    name: '', email: '', password: '', enrollment: '', branch: '', semester: '', teacherCode: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -37,44 +31,43 @@ export default function SignupPage() {
       setError('Invalid teacher access code. Please contact your administrator.');
       return;
     }
-
     if (form.password.length < 6) {
       setError('Password must be at least 6 characters.');
       return;
     }
 
     setLoading(true);
-    const supabase = createClient();
-
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email: form.email.trim(),
-      password: form.password,
-      options: {
-        data: {
-          name: form.name,
-          enrollment: form.enrollment,
-          branch: form.branch,
-          semester: form.semester,
-          role: role,
+    try {
+      const supabase = createClient();
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        options: {
+          data: { name: form.name, enrollment: form.enrollment, branch: form.branch, semester: form.semester, role },
         },
-      },
-    });
+      });
 
-    if (signUpError) {
-      setError(signUpError.message);
-      setLoading(false);
-      return;
-    }
+      if (signUpError) { setError(signUpError.message); return; }
 
-    if (data.user) {
-      // Profile is created automatically via DB trigger
-      if (role === 'teacher') {
-        router.push('/admin');
-      } else {
-        router.push('/dashboard');
+      // session=null means email confirmation is still required
+      if (data.user && !data.session) {
+        setError('Please check your email inbox and click the confirmation link to continue.');
+        return;
       }
+
+      if (data.user && data.session) {
+        // Wait 800ms for the DB trigger to create the profile row
+        await new Promise(res => setTimeout(res, 800));
+        router.push(role === 'teacher' ? '/admin' : '/dashboard');
+        return;
+      }
+
+      setError('Signup failed — please try again.');
+    } catch (err: any) {
+      setError(err?.message || 'An unexpected error occurred. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -89,68 +82,40 @@ export default function SignupPage() {
                 <GraduationCap size={28} />
               </div>
               <h1 className="text-xl font-black">Create Account</h1>
-              <p className="text-purple-200 text-[10px] font-medium mt-1 uppercase tracking-widest">
-                Attendance Pro
-              </p>
+              <p className="text-purple-200 text-[10px] font-medium mt-1 uppercase tracking-widest">Attendance Pro</p>
             </div>
           </div>
 
           <div className="p-6">
             {step === 'role' ? (
-              // Step 1: Pick role
               <div>
                 <h2 className="text-base font-black text-gray-800 mb-1">I am a...</h2>
                 <p className="text-xs text-gray-400 mb-6">Choose your account type to get started</p>
-
                 <div className="grid grid-cols-2 gap-4 mb-8">
-                  <button
-                    onClick={() => setRole('student')}
-                    className={`flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all ${
-                      role === 'student'
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                        : 'border-gray-100 text-gray-400 hover:border-gray-200'
-                    }`}
-                  >
+                  <button onClick={() => setRole('student')}
+                    className={`flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all ${role === 'student' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}>
                     <UserCircle2 size={32} />
                     <span className="font-bold text-sm">Student</span>
                     <span className="text-[10px] text-center leading-relaxed opacity-70">Mark attendance and track your progress</span>
                   </button>
-
-                  <button
-                    onClick={() => setRole('teacher')}
-                    className={`flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all ${
-                      role === 'teacher'
-                        ? 'border-purple-500 bg-purple-50 text-purple-700'
-                        : 'border-gray-100 text-gray-400 hover:border-gray-200'
-                    }`}
-                  >
+                  <button onClick={() => setRole('teacher')}
+                    className={`flex flex-col items-center gap-3 p-5 rounded-2xl border-2 transition-all ${role === 'teacher' ? 'border-purple-500 bg-purple-50 text-purple-700' : 'border-gray-100 text-gray-400 hover:border-gray-200'}`}>
                     <Shield size={32} />
                     <span className="font-bold text-sm">Teacher</span>
                     <span className="text-[10px] text-center leading-relaxed opacity-70">Open/close attendance and manage students</span>
                   </button>
                 </div>
-
-                <button
-                  onClick={() => setStep('form')}
-                  className="w-full bg-[#8e24aa] text-white py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-purple-200 hover:bg-[#7b1fa2] transition-all flex items-center justify-center gap-2"
-                >
-                  CONTINUE AS {role.toUpperCase()}
-                  <ArrowRight size={16} />
+                <button onClick={() => setStep('form')}
+                  className="w-full bg-[#8e24aa] text-white py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-purple-200 hover:bg-[#7b1fa2] transition-all flex items-center justify-center gap-2">
+                  CONTINUE AS {role.toUpperCase()} <ArrowRight size={16} />
                 </button>
               </div>
             ) : (
-              // Step 2: Fill in details
               <div>
-                <button
-                  onClick={() => setStep('role')}
-                  className="text-[10px] font-bold text-gray-400 hover:text-purple-600 mb-4 flex items-center gap-1 transition-colors"
-                >
+                <button onClick={() => setStep('role')} className="text-[10px] font-bold text-gray-400 hover:text-purple-600 mb-4 flex items-center gap-1 transition-colors">
                   ← Change role
                 </button>
-
-                <div className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-full mb-4 ${
-                  role === 'teacher' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-purple-50 text-purple-700 border border-purple-200'
-                }`}>
+                <div className={`inline-flex items-center gap-1.5 text-[10px] font-bold px-3 py-1.5 rounded-full mb-4 ${role === 'teacher' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-purple-50 text-purple-700 border border-purple-200'}`}>
                   {role === 'teacher' ? <Shield size={12} /> : <UserCircle2 size={12} />}
                   Signing up as {role}
                 </div>
@@ -165,15 +130,12 @@ export default function SignupPage() {
                 <form onSubmit={handleSignup} className="space-y-3">
                   <div>
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Full Name</label>
-                    <input name="name" value={form.name} onChange={handleChange} required
-                      placeholder="Shubhika Jain"
+                    <input name="name" value={form.name} onChange={handleChange} required placeholder="Shubhika Jain"
                       className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all" />
                   </div>
-
                   <div>
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">University Email</label>
-                    <input name="email" value={form.email} onChange={handleChange} required type="email"
-                      placeholder="name@university.edu"
+                    <input name="email" value={form.email} onChange={handleChange} required type="email" placeholder="name@university.edu"
                       className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all" />
                   </div>
 
@@ -181,23 +143,16 @@ export default function SignupPage() {
                     <>
                       <div>
                         <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Enrollment Number</label>
-                        <input name="enrollment" value={form.enrollment} onChange={handleChange} required
-                          placeholder="06401192024"
+                        <input name="enrollment" value={form.enrollment} onChange={handleChange} required placeholder="06401192024"
                           className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all" />
                       </div>
-
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Branch</label>
                           <select name="branch" value={form.branch} onChange={handleChange} required
                             className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all">
                             <option value="">Select</option>
-                            <option value="AIML">AIML</option>
-                            <option value="CSE">CSE</option>
-                            <option value="IT">IT</option>
-                            <option value="ECE">ECE</option>
-                            <option value="MECH">MECH</option>
-                            <option value="CIVIL">CIVIL</option>
+                            {['AIML','CSE','IT','ECE','MECH','CIVIL'].map(b => <option key={b} value={b}>{b}</option>)}
                           </select>
                         </div>
                         <div>
@@ -215,8 +170,7 @@ export default function SignupPage() {
                   {role === 'teacher' && (
                     <div>
                       <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Teacher Access Code</label>
-                      <input name="teacherCode" value={form.teacherCode} onChange={handleChange} required
-                        placeholder="Enter the secret code given by admin"
+                      <input name="teacherCode" value={form.teacherCode} onChange={handleChange} required placeholder="Enter the secret code given by admin"
                         className="w-full px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-amber-200 focus:border-amber-400 transition-all" />
                       <p className="text-[9px] text-amber-600 mt-1 font-medium">This code is provided by the system administrator.</p>
                     </div>
@@ -225,12 +179,9 @@ export default function SignupPage() {
                   <div>
                     <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Password</label>
                     <div className="relative">
-                      <input name="password" value={form.password} onChange={handleChange} required
-                        type={showPassword ? 'text' : 'password'} minLength={6}
-                        placeholder="Min 6 characters"
+                      <input name="password" value={form.password} onChange={handleChange} required type={showPassword ? 'text' : 'password'} minLength={6} placeholder="Min 6 characters"
                         className="w-full px-4 py-2.5 pr-12 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-purple-200 focus:border-purple-400 transition-all" />
-                      <button type="button" onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                      <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                         {showPassword ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
                     </div>
@@ -239,10 +190,7 @@ export default function SignupPage() {
                   <button type="submit" disabled={loading}
                     className="w-full bg-[#8e24aa] text-white py-3.5 rounded-xl font-bold text-sm shadow-lg shadow-purple-200 hover:bg-[#7b1fa2] transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-2">
                     {loading ? (
-                      <>
-                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                        CREATING ACCOUNT...
-                      </>
+                      <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> CREATING ACCOUNT...</>
                     ) : (
                       <>CREATE ACCOUNT <ArrowRight size={16} /></>
                     )}
@@ -254,9 +202,7 @@ export default function SignupPage() {
             <div className="mt-5 text-center">
               <p className="text-[11px] text-gray-400 font-medium">
                 Already have an account?{' '}
-                <Link href="/login" className="text-purple-600 font-bold hover:underline">
-                  Sign in
-                </Link>
+                <Link href="/login" className="text-purple-600 font-bold hover:underline">Sign in</Link>
               </p>
             </div>
           </div>
